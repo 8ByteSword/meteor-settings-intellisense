@@ -8,10 +8,10 @@ function activate(context) {
   console.log('Congratulations, your extension "meteor-settings-intellisense" is now active!');
   // Load settings when the extension is activated
   const { workspaceFolders } = vscode.workspace;
-  let settings = {};
+  let settings = {}; let baseDir, settingsFilePath;
   if (workspaceFolders) {
-    const baseDir = workspaceFolders[0].uri.fsPath;
-    const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsHinting').get('settingsFilePath');
+    baseDir = workspaceFolders[0].uri.fsPath;
+    settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
     settings = parseSettings.readSettings(baseDir, settingsFilePath);
     console.log('Loaded settings:', settings);
   } else {
@@ -179,6 +179,58 @@ function activate(context) {
     );
 
     context.subscriptions.push(completionProvider);
+
+    // Register link provider
+    const linkProvider = vscode.languages.registerDocumentLinkProvider(
+      [
+          { scheme: 'file', language: 'javascript' },
+          { scheme: 'file', language: 'javascriptreact' },
+          { scheme: 'file', language: 'typescript' },
+          { scheme: 'file', language: 'typescriptreact' },
+      ],
+      {
+          provideDocumentLinks(doc) {
+              const links = [];
+              const text = doc.getText();
+              const pattern = /Meteor\.settings\.[\w.]+/g;
+              let match;
+              const settingsPath = `${baseDir}/${settingsFilePath}`;
+
+              const wordLocations = {};
+
+              while ((match = pattern.exec(text)) !== null) {
+                  const keys = match[0].split('.').slice(2); // Remove 'Meteor.settings'
+
+                  keys.forEach((key) => {
+                    const start = match.index + match[0].indexOf(key);
+                    const docStart = doc.positionAt(start);
+                    const end = start + key.length;
+                    const docEnd = doc.positionAt(end);
+                    const range = new vscode.Range(docStart, docEnd);
+
+                    let line; let pos;
+                    if(!wordLocations[key]){
+                      [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key);
+                      wordLocations[key] = [line, pos]
+                    } else [line, pos] = wordLocations[key]
+
+                    if(line && pos){
+                      const uri = vscode.Uri.file(settingsPath).with({ fragment: `L${line + 1},${pos + 1}` });
+                      const link = new vscode.DocumentLink(range, uri)
+                      
+                      links.push(link)
+                    }
+                  })
+
+                  // text = text.replace(match, '');
+              }
+
+              return links;
+          },
+      }
+  );
+
+    context.subscriptions.push(linkProvider);
   }
 }
 

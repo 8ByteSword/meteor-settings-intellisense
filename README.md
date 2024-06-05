@@ -7,6 +7,7 @@ This Visual Studio Code extension provides hints and autocompletion for Meteor s
 - **Hover Tooltips**: Hover over `Meteor.settings` keys to see their values and types.
 - **Code Completion**: Get autocompletion suggestions for `Meteor.settings` keys and their values.
 - **Linting**: Warns you if you try to access non-public settings in client code.
+- **Links**: Ctrl + click a setting to go to that location in the `Meteor.settings`
 
 ## Usage
 
