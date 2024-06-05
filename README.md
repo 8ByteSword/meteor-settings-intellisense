@@ -20,7 +20,7 @@ You can configure the path to the `settings.json` file by setting the `meteorSet
 
 ## Contributing
 
-If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/your-repo/meteor-settings-intellisense).
+If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/8ByteSword/meteor-settings-intellisense).
 
 ## License
 

@@ -11,7 +11,7 @@ function activate(context) {
   let settings = {};
   if (workspaceFolders) {
     const baseDir = workspaceFolders[0].uri.fsPath;
-    const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsHinting').get('settingsFilePath');
+    const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
     settings = parseSettings.readSettings(baseDir, settingsFilePath);
     console.log('Loaded settings:', settings);
   } else {

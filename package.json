@@ -39,8 +39,8 @@
     }
   },
   "devDependencies": {
-    "vscode": "^1.1.37",
     "eslint": "^7.32.0",
-    "eslint-plugin-promise": "^4.2.1"
+    "eslint-plugin-promise": "^4.2.1",
+    "vscode": "^1.1.34"
   }
 }
