@@ -36,7 +36,7 @@ function getSettingPosition(baseDir, settingsFilePath, setting) {
   const settings = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
   settings.forEach((line, index) => {
     const pos = line.indexOf(setting);
-    if(pos && pos >= 0) return res = [index, pos];
+    if(pos && pos >= 0) res = [index, pos];
   });
   return res;
 }

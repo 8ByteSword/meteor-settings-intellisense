@@ -198,31 +198,32 @@ function activate(context) {
 
               const wordLocations = {};
 
+              const createLink = (key) => {
+                const start = match.index + match[0].indexOf(key);
+                const docStart = doc.positionAt(start);
+                const end = start + key.length;
+                const docEnd = doc.positionAt(end);
+                const range = new vscode.Range(docStart, docEnd);
+    
+                let line; let pos;
+                if (!wordLocations[key]) {
+                  [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key);
+                  wordLocations[key] = [line, pos];
+                } else [line, pos] = wordLocations[key];
+    
+                if (line && pos) {
+                  const uri = vscode.Uri.file(settingsPath).with({ fragment: `L${line + 1},${pos + 1}` });
+                  const link = new vscode.DocumentLink(range, uri);
+    
+                  links.push(link);
+                }
+              };
+    
+
               while ((match = pattern.exec(text)) !== null) {
                   const keys = match[0].split('.').slice(2); // Remove 'Meteor.settings'
 
-                  keys.forEach((key) => {
-                    const start = match.index + match[0].indexOf(key);
-                    const docStart = doc.positionAt(start);
-                    const end = start + key.length;
-                    const docEnd = doc.positionAt(end);
-                    const range = new vscode.Range(docStart, docEnd);
-
-                    let line; let pos;
-                    if(!wordLocations[key]){
-                      [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key);
-                      wordLocations[key] = [line, pos]
-                    } else [line, pos] = wordLocations[key]
-
-                    if(line && pos){
-                      const uri = vscode.Uri.file(settingsPath).with({ fragment: `L${line + 1},${pos + 1}` });
-                      const link = new vscode.DocumentLink(range, uri)
-                      
-                      links.push(link)
-                    }
-                  })
-
-                  // text = text.replace(match, '');
+                  keys.forEach(createLink)
               }
 
               return links;
