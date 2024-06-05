@@ -1,0 +1,46 @@
+{
+  "name": "meteor-settings-intellisense",
+  "displayName": "Meteor Settings IntelliSense",
+  "description": "Provides hints and autocompletion for Meteor settings",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "icon": "logo.png",
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "workspaceContains:settings.json",
+    "workspaceContains:.meteor/release"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "meteor-settings-intellisense.helloWorld",
+        "title": "Hello World"
+      },
+      {
+        "command": "meteor-settings-intellisense.testSettingsParsing",
+        "title": "Test Settings Parsing"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "meteorSettingsIntelliSense.settingsFilePath": {
+          "type": "string",
+          "default": "settings.json",
+          "description": "The path to the Meteor settings file relative to the workspace root."
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "vscode": "^1.1.37",
+    "eslint": "^7.32.0",
+    "eslint-plugin-promise": "^4.2.1"
+  }
+}
