@@ -1,6 +1,7 @@
 {
   "name": "meteor-settings-intellisense",
   "displayName": "Meteor Settings IntelliSense",
+  "publisher": "etraid",
   "description": "Provides hints and autocompletion for Meteor settings",
   "version": "0.0.1",
   "engines": {
