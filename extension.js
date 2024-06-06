@@ -210,17 +210,19 @@ function activate(context) {
                   wordLocations[key] = [line, pos];
                 } else [line, pos] = wordLocations[key];
     
+
+                let uri = vscode.Uri.file(settingsPath);
                 if (line && pos) {
-                  const uri = vscode.Uri.file(settingsPath).with({ fragment: `L${line + 1},${pos + 1}` });
-                  const link = new vscode.DocumentLink(range, uri);
-    
-                  links.push(link);
+                  uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
                 }
+    
+                const link = new vscode.DocumentLink(range, uri);
+                links.push(link);
               };
     
 
               while ((match = pattern.exec(text)) !== null) {
-                  const keys = match[0].split('.').slice(2); // Remove 'Meteor.settings'
+                  const keys = match[0].split('.').slice(1); // Remove 'Meteor'
 
                   keys.forEach(createLink)
               }
