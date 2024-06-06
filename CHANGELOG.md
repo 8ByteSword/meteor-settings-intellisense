@@ -7,6 +7,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [0.0.2]
 
 - Added click + ctrl functionality
+    - Ctrl + click a setting to go to that location in the `Meteor.settings`
+
+Bug fixes:
+    - Settings file path now works properly
+    - Settings are now updated when configuration changes
 
 ## [0.0.1]
 

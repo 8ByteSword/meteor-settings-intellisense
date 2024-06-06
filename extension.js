@@ -6,20 +6,27 @@ const parseSettings = require('./parseSettings');
  */
 function activate(context) {
   console.log('Congratulations, your extension "meteor-settings-intellisense" is now active!');
-  // Load settings when the extension is activated
-  const { workspaceFolders } = vscode.workspace;
-  let settings = {}; let baseDir, settingsFilePath;
-  if (workspaceFolders) {
-    baseDir = workspaceFolders[0].uri.fsPath;
-    settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
-    settings = parseSettings.readSettings(baseDir, settingsFilePath);
-    console.log('Loaded settings:', settings);
-  } else {
-    console.log('No workspace folder open.');
+  // Function to load settings
+  function loadSettings() {
+    const { workspaceFolders } = vscode.workspace;
+    let settings = {};
+    if (workspaceFolders) {
+      const baseDir = workspaceFolders[0].uri.fsPath;
+      const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
+      settings = parseSettings.readSettings(baseDir, settingsFilePath);
+      console.log('Loaded settings:', settings);
+    } else {
+      console.log('No workspace folder open.');
+    }
+    return settings;
   }
+
+  // Initial load of settings
+  let settings = loadSettings();
 
   // Register a command to test the settings parsing
   const testSettingsCommand = vscode.commands.registerCommand('meteor-settings-intellisense.testSettingsParsing', () => {
+    const { workspaceFolders } = vscode.workspace;
     if (workspaceFolders) {
       vscode.window.showInformationMessage(`Parsed settings: ${JSON.stringify(settings, null, 2)}`);
     } else {
@@ -30,7 +37,6 @@ function activate(context) {
   context.subscriptions.push(testSettingsCommand);
 
   // Example of using the settings for linting and hover tooltips
-  if (workspaceFolders) {
     console.log('Loaded settings Here:', settings);
 
     // Register a hover provider
@@ -193,6 +199,9 @@ function activate(context) {
               const text = doc.getText();
               const pattern = /Meteor\.settings\.[\w.]+/g;
               let match;
+              const workspaceFolders = vscode.workspace.workspaceFolders;
+              const baseDir = workspaceFolders[0].uri.fsPath;
+              const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
               const settingsPath = `${baseDir}/${settingsFilePath}`;
 
               const wordLocations = {};
@@ -232,8 +241,16 @@ function activate(context) {
   );
 
     context.subscriptions.push(linkProvider);
+
+    // Listen for configuration changes
+  vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration('meteorSettingsIntelliSense.settingsFilePath')) {
+      console.log('Settings file path changed, reloading settings...');
+      settings = loadSettings();
+    }
+  });
   }
-}
+
 
 function deactivate() {}
 
