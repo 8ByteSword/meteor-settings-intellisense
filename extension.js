@@ -141,7 +141,6 @@ function activate(context) {
               const completionItem = new vscode.CompletionItem(label, completionItemKind);
               completionItem.detail = detail;
               completionItem.documentation = new vscode.MarkdownString(documentation);
-              completionItem.insertText = key; // Only insert the key
               completionItem.range = new vscode.Range(
                 position.translate(0, -match[0].length),
                 position,
