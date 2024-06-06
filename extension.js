@@ -213,7 +213,7 @@ function activate(context) {
                 let uri = vscode.Uri.file(settingsPath);
                 if (line && pos) {
                   uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
-                }
+                } else if(key !== 'settings') return;
     
                 const link = new vscode.DocumentLink(range, uri);
                 links.push(link);
