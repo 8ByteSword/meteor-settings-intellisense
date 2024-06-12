@@ -1,15 +1,52 @@
 const vscode = require('vscode');
 const parseSettings = require('./parseSettings');
+const path = require('path');
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
   console.log('Congratulations, your extension "meteor-settings-intellisense" is now active!');
+
+  let settings = {};
+  let settingsWatcher;
+
+// Function to create a file system watcher for the settings file
+  function createSettingsWatcher(context) {
+    const { workspaceFolders } = vscode.workspace;
+    const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
+    const baseDir = workspaceFolders[0].uri.fsPath;
+    const filePath = path.isAbsolute(settingsFilePath)
+    ? settingsFilePath
+    : path.join(baseDir, settingsFilePath);
+    if (settingsWatcher) {
+      settingsWatcher.dispose();
+    }
+
+    settingsWatcher = vscode.workspace.createFileSystemWatcher(filePath);
+
+    settingsWatcher.onDidChange(() => {
+      console.log('Settings file changed, reloading settings...');
+      loadSettings();
+    });
+
+    settingsWatcher.onDidCreate(() => {
+      console.log('Settings file created, loading settings...');
+      loadSettings();
+    });
+
+    settingsWatcher.onDidDelete(() => {
+      console.log('Settings file deleted, clearing settings...');
+      settings = {};
+    });
+
+    context.
+    subscriptions.push(settingsWatcher);
+  }
+
   // Function to load settings
   function loadSettings() {
     const { workspaceFolders } = vscode.workspace;
-    let settings = {};
     if (workspaceFolders) {
       const baseDir = workspaceFolders[0].uri.fsPath;
       const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
@@ -22,7 +59,8 @@ function activate(context) {
   }
 
   // Initial load of settings
-  let settings = loadSettings();
+  settings = loadSettings();
+  createSettingsWatcher(context);
 
   // Register a command to test the settings parsing
   const testSettingsCommand = vscode.commands.registerCommand('meteor-settings-intellisense.testSettingsParsing', () => {
@@ -247,6 +285,8 @@ function activate(context) {
     if (event.affectsConfiguration('meteorSettingsIntelliSense.settingsFilePath')) {
       console.log('Settings file path changed, reloading settings...');
       settings = loadSettings();
+      createSettingsWatcher(context);
+
     }
   });
   }

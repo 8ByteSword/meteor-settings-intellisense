@@ -4,16 +4,30 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.0] - 2024-06-12
+
+### Added
+  - Implemented file system watcher to monitor changes in the settings file.
+  - Settings are now updated dynamically whenever the file changes.
+
+### Changed
+  - Updated the file path handling to use the workspace base directory.
+
+### Fixed
+  - Resolved an issue where settings weren't being updated when the file changed.
+
+
+
 ## [0.0.3]
 
-Bug fixes:
+### Fixed
     - Settings file path now works properly
-    - Settings are now updated when configuration changes
+    - Settings are now updated when configurations file changes
 
 ## [0.0.2]
 
-- Added click + ctrl functionality
-    - Ctrl + click a setting to go to that location in the `Meteor.settings`
+### Added 
+    - ctrl + click functionality: Ctrl + click a setting to go to that location in the `Meteor.settings`
 
 ## [0.0.1]
 
