@@ -4,10 +4,26 @@ This Visual Studio Code extension provides hints and autocompletion for Meteor s
 
 ## Features
 
-- **Hover Tooltips**: Hover over `Meteor.settings` keys to see their values and types.
-- **Code Completion**: Get autocompletion suggestions for `Meteor.settings` keys and their values.
-- **Linting**: Warns you if you try to access non-public settings in client code.
-- **Links**: Ctrl + click a setting to go to that location in the `Meteor.settings`
+### Hover Tooltips
+Hover over `Meteor.settings` keys to see their values and types. This helps you understand what each setting represents and its data type.
+
+<img src="https://drive.google.com/uc?export=view&id=1QNp6Qp51grPyPFuazHTHQY7a7xqLYW_A" width="480" alt="Hover function">
+
+### Code Completion
+Get autocompletion suggestions for `Meteor.settings` keys and their values. As you type, the extension will provide a list of available settings and their values, making it easier to access and use them in your code.
+
+<img src="https://drive.google.com/uc?export=view&id=1kf_OzUnBLQjdp4--Or0lXL8UlFPTo5C_" width="480" alt="Code completion">
+
+
+### Non public key from client
+The extension warns you if you try to access non-public settings in client code. This helps prevent accidental exposure of sensitive data and ensures that your code follows best practices for accessing Meteor settings.
+
+<img src="https://drive.google.com/uc?export=view&id=1ikZSsn52Pkx04ZjKvB6nlmtJMhIeWL5g" width="480" alt="Non public key from client">
+
+### Links
+Ctrl + click a setting to go to that location in the `Meteor.settings`. This feature allows you to quickly navigate to the definition of a setting, making it easier to understand and modify its value.
+
+<img src="https://drive.google.com/uc?export=view&id=1BLB6UwKUZA_0Ze0zRlrcPfOjRIs3zs7O" width="480" alt="Ctrl + click feature ">
 
 ## Usage
 
@@ -18,6 +34,9 @@ This Visual Studio Code extension provides hints and autocompletion for Meteor s
 ## Configuration
 
 You can configure the path to the `settings.json` file by setting the `meteorSettingsIntelliSense.settingsFilePath` option in your workspace settings. By default, it looks for `settings.json` in the workspace root.
+
+
+<img src="https://drive.google.com/uc?export=view&id=1oJ6GFaYlpZQVfFz8ZwKk_OAm-qLRSf-m" width="480" alt="Settings file path">
 
 ## Contributing
 

@@ -8,10 +8,19 @@ const path = require('path');
 function activate(context) {
   console.log('Congratulations, your extension "meteor-settings-intellisense" is now active!');
 
+  function updateAllDiagnostics() {
+    vscode.workspace.textDocuments.forEach(document => {
+      if (document.languageId === 'javascript' || document.languageId === 'javascriptreact') {
+        diagnosticsCollection.delete(document.uri);
+        updateDiagnostics(document, settings);
+      }
+  });
+  }
+
   let settings = {};
   let settingsWatcher;
 
-// Function to create a file system watcher for the settings file
+  // Function to create a file system watcher for the settings file
   function createSettingsWatcher(context) {
     const { workspaceFolders } = vscode.workspace;
     const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
@@ -28,16 +37,19 @@ function activate(context) {
     settingsWatcher.onDidChange(() => {
       console.log('Settings file changed, reloading settings...');
       loadSettings();
+      updateAllDiagnostics();
     });
 
     settingsWatcher.onDidCreate(() => {
       console.log('Settings file created, loading settings...');
+      updateAllDiagnostics();
       loadSettings();
     });
 
     settingsWatcher.onDidDelete(() => {
       console.log('Settings file deleted, clearing settings...');
       settings = {};
+      updateAllDiagnostics();
     });
 
     context.
@@ -64,8 +76,8 @@ function activate(context) {
 
   // Register a command to test the settings parsing
   const testSettingsCommand = vscode.commands.registerCommand('meteor-settings-intellisense.testSettingsParsing', () => {
-    const { workspaceFolders } = vscode.workspace;
-    if (workspaceFolders) {
+  const { workspaceFolders } = vscode.workspace;
+  if (workspaceFolders) {
       vscode.window.showInformationMessage(`Parsed settings: ${JSON.stringify(settings, null, 2)}`);
     } else {
       vscode.window.showInformationMessage('No workspace folder open.');
@@ -75,220 +87,294 @@ function activate(context) {
   context.subscriptions.push(testSettingsCommand);
 
   // Example of using the settings for linting and hover tooltips
-    console.log('Loaded settings Here:', settings);
+  console.log('Loaded settings Here:', settings);
 
-    // Register a hover provider
-    const hoverProvider = vscode.languages.registerHoverProvider(
-      [
-        { scheme: 'file', language: 'javascript' },
-        { scheme: 'file', language: 'javascriptreact' },
-        { scheme: 'file', language: 'typescript' },
-        { scheme: 'file', language: 'typescriptreact' },
-      ],
-      {
-        provideHover(document, position, token) {
-          const range = document.getWordRangeAtPosition(position, /Meteor\.settings\.[\w.]+/);
-          if (range) {
-            const fullWord = document.getText(range);
-            const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
-            const keys = fullWord.split('.').slice(2); // Remove 'Meteor.settings'
+  const diagnosticsCollection = vscode.languages.createDiagnosticCollection('meteorSettings');
 
-            let value = settings;
-            let keyPath = 'Meteor.settings';
-            keys.every((key) => {
-              keyPath += `.${key}`;
-              if (key === hoveredWord) {
-                if (value[key] !== undefined) {
-                  value = value[key]; return false;
-                }
-                value = undefined;
-              } else if (value[key] !== undefined) {
-                value = value[key]; return true;
+function updateDiagnostics(document, settings) {
+  const diagnostics = [];
+  const text = document.getText();
+  const pattern = /Meteor\.settings\.[\w.]+/g;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const keys = match[0].split('.').slice(2); // get keys after Meteor.settings
+    let currentSettings = settings;
+    let exists = true;
+    keys.forEach(key => {
+      if (currentSettings && typeof currentSettings === 'object' && (key in currentSettings)) {
+        currentSettings = currentSettings[key];
+      } else {
+        exists = false;
+      }
+    });
+
+    const isPublic = match[0].startsWith('Meteor.settings.public');
+    const isClientFolder = document.uri.fsPath.includes('client');
+
+    if (isClientFolder && !isPublic) {
+      const diagnostic = new vscode.Diagnostic(
+        new vscode.Range(document.positionAt(match.index), document.positionAt(match.index + match[0].length)),
+        'Accessing non-public Meteor settings from client code.',
+        vscode.DiagnosticSeverity.Error
+      );
+      diagnostics.push(diagnostic);
+    }
+
+    if (!exists) {
+      const diagnostic = new vscode.Diagnostic(
+        new vscode.Range(document.positionAt(match.index), document.positionAt(match.index + match[0].length)),
+        'Meteor settings key does not exist.',
+        vscode.DiagnosticSeverity.Error
+      );
+      diagnostics.push(diagnostic);
+    }
+  }
+
+  diagnosticsCollection.set(document.uri, diagnostics);
+}
+
+  // Register a hover provider
+  const hoverProvider = vscode.languages.registerHoverProvider(
+    [
+      { scheme: 'file', language: 'javascript' },
+      { scheme: 'file', language: 'javascriptreact' },
+      { scheme: 'file', language: 'typescript' },
+      { scheme: 'file', language: 'typescriptreact' },
+    ],
+    {
+      provideHover(document, position, token) {
+        const range = document.getWordRangeAtPosition(position, /Meteor\.settings\.[\w.]+/);
+        if (range) {
+          const fullWord = document.getText(range);
+          const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
+          const keys = fullWord.split('.').slice(2); // Remove 'Meteor.settings'
+
+          let value = settings;
+          let keyPath = 'Meteor.settings';
+          keys.every((key) => {
+            keyPath += `.${key}`;
+            if (key === hoveredWord) {
+              if (value[key] !== undefined) {
+                value = value[key]; return false;
               }
               value = undefined;
-              return false;
-            });
-
-            if (value !== undefined) {
-              const isClientFolder = document.uri.fsPath.includes('client');
-              const isPublicKey = fullWord.startsWith('Meteor.settings.public.');
-              let type = typeof value;
-              if (Array.isArray(value)) {
-                type = 'array';
-              } else if (type === 'object') {
-                type = 'object';
-              }
-
-              let hoverMessage = `**${keyPath}** (${type}): \n\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
-
-              if (isClientFolder && !isPublicKey) {
-                hoverMessage = `**Warning: Accessing non-public key in client code.**\n\n${hoverMessage}`;
-              }
-
-              return new vscode.Hover(new vscode.MarkdownString(hoverMessage));
+            } else if (value[key] !== undefined) {
+              value = value[key]; return true;
             }
-          }
-          return null;
-        },
-      },
-    );
+            value = undefined;
+            return false;
+          });
 
-    context.subscriptions.push(hoverProvider);
-    // Register a completion provider
-    const completionProvider = vscode.languages.registerCompletionItemProvider(
-      [
+          if (value !== undefined) {
+            const content = new vscode.MarkdownString()
+            const isClientFolder = document.uri.fsPath.includes('client');
+            const isPublicKey = fullWord.startsWith('Meteor.settings.public');
+            let type = typeof value;
+            if (Array.isArray(value)) {
+              type = 'array';
+            } else if (type === 'object') {
+              type = 'object';
+            }
+
+            
+            if (isClientFolder && !isPublicKey) {
+              content.appendMarkdown(`<span style="color:#c71c1cdb;"><b>Warning: Accessing non-public key in client code.</b></span> \n`);
+            }
+            content.appendMarkdown(`\n **${keyPath}** (${type}): \n`)
+            content.appendCodeblock(JSON.stringify(value, null, 2), 'json');
+            content.supportHtml = true;
+            content.isTrusted = true;
+            return new vscode.Hover(content, range);
+          }
+        }
+        return null;
+      },
+    },
+  );
+
+  context.subscriptions.push(hoverProvider);
+  // Register a completion provider
+  const completionProvider = vscode.languages.registerCompletionItemProvider(
+    [
+      { scheme: 'file', language: 'javascript' },
+      { scheme: 'file', language: 'javascriptreact' },
+      { scheme: 'file', language: 'typescript' },
+      { scheme: 'file', language: 'typescriptreact' },
+    ],
+    {
+      provideCompletionItems(document, position, token, context) {
+        const linePrefix = document.lineAt(position).text.substr(0, position.character);
+        const match = linePrefix.match(/Meteor\.settings(\.\w+)*\.?$/);
+        if (!match) {
+          return undefined;
+        }
+
+        const isClientFolder = document.uri.fsPath.includes('client');
+        const completionItems = [];
+
+        function addCompletionItems(obj, parentKey, currentKey, isClientFolder) {
+          Object.keys(obj).forEach((key, index) => {
+            if (currentKey !== undefined && !key.startsWith(currentKey)) return;
+            let completionItemKind;
+            let detail = '';
+            let sortText = String(index).padStart(5, '0');
+            const documentation = new vscode.MarkdownString();
+            documentation.isTrusted = true;
+            documentation.supportHtml = true;
+            const fullKeyPath = `${parentKey ? `${parentKey}` : ''}${key}`;
+            if (isClientFolder && !fullKeyPath.startsWith('Meteor.settings.public')) {
+              documentation.appendMarkdown(`<span style="color:#c71c1cdb;"><b>⚠️ Warning: Accessing non-public key in client code.</b></span> \n\n`);
+              sortText = '99999'; // Push to the end of the list
+            }
+
+            if (typeof obj[key] === 'object' && obj[key] !== null) {
+              completionItemKind = vscode.CompletionItemKind.Module;
+              detail = 'Object';
+              documentation.appendMarkdown(`An object with properties: \n`);
+              documentation.appendCodeblock(JSON.stringify(obj[key], null, 2), 'json');
+            } else if (typeof obj[key] === 'string') {
+              completionItemKind = vscode.CompletionItemKind.Text;
+              detail = 'String';
+              documentation.appendMarkdown(`A string value: "${obj[key]}"`);
+            } else if (typeof obj[key] === 'number') {
+              completionItemKind = vscode.CompletionItemKind.Number;
+              detail = 'Number';
+              documentation.appendMarkdown(`A number value: ${obj[key]}`);
+            } else if (Array.isArray(obj[key])) {
+              completionItemKind = vscode.CompletionItemKind.Enum;
+              detail = 'Array';
+              documentation.appendMarkdown(`An array with elements: \n`);
+              documentation.appendCodeblock(JSON.stringify(obj[key], null, 2), 'json');
+
+            }
+            const label = `${parentKey ? `${parentKey}` : ''}${key}`;
+            const completionItem = new vscode.CompletionItem(label, completionItemKind);
+            completionItem.detail = detail;
+            completionItem.documentation = documentation;
+            completionItem.range = new vscode.Range(
+              position.translate(0, -match[0].length),
+              position,
+            );
+            completionItem.sortText = sortText
+            completionItems.push(completionItem);
+            // console.log(`Key added: ${key}`);
+          });
+        }
+
+        const settingsPath = match[0].split('.').slice(2);
+        const wordRange = document.getWordRangeAtPosition(position);
+        const currentKey = wordRange ? document.getText(wordRange) : '';
+        let currentSettings = settings;
+        settingsPath.every((key) => {
+          if (currentSettings[key] !== undefined) {
+            currentSettings = currentSettings[key];
+            return true;
+          } if (key === currentKey || key === '') {
+            return false;
+          }
+          currentSettings = null;
+          return false;
+        });
+        console.log(`Current key: ${currentKey}`);
+        if (currentSettings !== null && typeof currentSettings === 'object') {
+          addCompletionItems(currentSettings, match[0], currentKey, isClientFolder);
+        }
+        console.log('Completion items:', completionItems);
+        return completionItems;
+      },
+    },
+    '.', // Trigger completion on '.'
+    ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), // Trigger completion on all alphabetic characters
+  );
+
+  context.subscriptions.push(completionProvider);
+
+  // Register link provider
+  const linkProvider = vscode.languages.registerDocumentLinkProvider(
+    [
         { scheme: 'file', language: 'javascript' },
         { scheme: 'file', language: 'javascriptreact' },
         { scheme: 'file', language: 'typescript' },
         { scheme: 'file', language: 'typescriptreact' },
-      ],
-      {
-        provideCompletionItems(document, position, token, context) {
-          const linePrefix = document.lineAt(position).text.substr(0, position.character);
-          const match = linePrefix.match(/Meteor\.settings(\.\w+)*\.?$/);
-          if (!match) {
-            return undefined;
-          }
+    ],
+    {
+        provideDocumentLinks(doc) {
+            const links = [];
+            const text = doc.getText();
+            const pattern = /Meteor\.settings\.[\w.]+/g;
+            let match;
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            const baseDir = workspaceFolders[0].uri.fsPath;
+            const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
+            const settingsPath = `${baseDir}/${settingsFilePath}`;
 
-          const isClientFolder = document.uri.fsPath.includes('client');
-          const completionItems = [];
+            const wordLocations = {};
 
-          function addCompletionItems(obj, parentKey, currentKey) {
-            Object.keys(obj).forEach((key, index) => {
-              if (isClientFolder && parentKey === 'Meteor.settings' && key !== 'public') {
-                return;
-              }
-              if (currentKey !== undefined && !key.startsWith(currentKey)) return;
-              let completionItemKind = vscode.CompletionItemKind.Field;
-              let detail = '';
-              let documentation = '';
+            const createLink = (key) => {
+              const start = match.index + match[0].indexOf(key);
+              const docStart = doc.positionAt(start);
+              const end = start + key.length;
+              const docEnd = doc.positionAt(end);
+              const range = new vscode.Range(docStart, docEnd);
+  
+              let line; let pos;
+              if (!wordLocations[key]) {
+                [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key);
+                wordLocations[key] = [line, pos];
+              } else [line, pos] = wordLocations[key];
+  
+              let uri = vscode.Uri.file(settingsPath);
+              if (line && pos) {
+                uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
+              } else if(key !== 'settings') return;
+  
+              const link = new vscode.DocumentLink(range, uri);
+              links.push(link);
+            };
+  
 
-              if (typeof obj[key] === 'object' && obj[key] !== null) {
-                completionItemKind = vscode.CompletionItemKind.Module;
-                detail = 'Object';
-                documentation = `An object with properties: \n\`\`\`json\n${JSON.stringify(obj[key], null, 2)}\n\`\`\``;
-              } else if (typeof obj[key] === 'string') {
-                completionItemKind = vscode.CompletionItemKind.Text;
-                detail = 'String';
-                documentation = `A string value: "${obj[key]}"`;
-              } else if (typeof obj[key] === 'number') {
-                completionItemKind = vscode.CompletionItemKind.Number;
-                detail = 'Number';
-                documentation = `A number value: ${obj[key]}`;
-              } else if (Array.isArray(obj[key])) {
-                completionItemKind = vscode.CompletionItemKind.Enum;
-                detail = 'Array';
-                documentation = `An array with elements: \n\`\`\`json\n${JSON.stringify(obj[key], null, 2)}\n\`\`\``;
-              }
+            while ((match = pattern.exec(text)) !== null) {
+                const keys = match[0].split('.').slice(1); // Remove 'Meteor'
 
-              const label = `${parentKey ? `${parentKey}` : ''}${key}`;
-              const completionItem = new vscode.CompletionItem(label, completionItemKind);
-              completionItem.detail = detail;
-              completionItem.documentation = new vscode.MarkdownString(documentation);
-              completionItem.range = new vscode.Range(
-                position.translate(0, -match[0].length),
-                position,
-              );
-              completionItem.sortText = String(index).padStart(5, '0');
-              completionItems.push(completionItem);
-              // console.log(`Key added: ${key}`);
-            });
-          }
-
-          const settingsPath = match[0].split('.').slice(2);
-          const wordRange = document.getWordRangeAtPosition(position);
-          const currentKey = wordRange ? document.getText(wordRange) : '';
-          let currentSettings = settings;
-          settingsPath.every((key) => {
-            if (currentSettings[key] !== undefined) {
-              currentSettings = currentSettings[key];
-              return true;
-            } if (key === currentKey || key === '') {
-              return false;
+                keys.forEach(createLink)
             }
-            currentSettings = null;
-            return false;
-          });
-          console.log(`Current key: ${currentKey}`);
-          if (currentSettings !== null && typeof currentSettings === 'object') {
-            addCompletionItems(currentSettings, match[0], currentKey);
-          }
-          console.log('Completion items:', completionItems);
-          return completionItems;
+
+            return links;
         },
-      },
-      '.', // Trigger completion on '.'
-      ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), // Trigger completion on all alphabetic characters
-    );
+    }
+);
 
-    context.subscriptions.push(completionProvider);
+  context.subscriptions.push(linkProvider);
 
-    // Register link provider
-    const linkProvider = vscode.languages.registerDocumentLinkProvider(
-      [
-          { scheme: 'file', language: 'javascript' },
-          { scheme: 'file', language: 'javascriptreact' },
-          { scheme: 'file', language: 'typescript' },
-          { scheme: 'file', language: 'typescriptreact' },
-      ],
-      {
-          provideDocumentLinks(doc) {
-              const links = [];
-              const text = doc.getText();
-              const pattern = /Meteor\.settings\.[\w.]+/g;
-              let match;
-              const workspaceFolders = vscode.workspace.workspaceFolders;
-              const baseDir = workspaceFolders[0].uri.fsPath;
-              const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
-              const settingsPath = `${baseDir}/${settingsFilePath}`;
-
-              const wordLocations = {};
-
-              const createLink = (key) => {
-                const start = match.index + match[0].indexOf(key);
-                const docStart = doc.positionAt(start);
-                const end = start + key.length;
-                const docEnd = doc.positionAt(end);
-                const range = new vscode.Range(docStart, docEnd);
-    
-                let line; let pos;
-                if (!wordLocations[key]) {
-                  [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key);
-                  wordLocations[key] = [line, pos];
-                } else [line, pos] = wordLocations[key];
-    
-                let uri = vscode.Uri.file(settingsPath);
-                if (line && pos) {
-                  uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
-                } else if(key !== 'settings') return;
-    
-                const link = new vscode.DocumentLink(range, uri);
-                links.push(link);
-              };
-    
-
-              while ((match = pattern.exec(text)) !== null) {
-                  const keys = match[0].split('.').slice(1); // Remove 'Meteor'
-
-                  keys.forEach(createLink)
-              }
-
-              return links;
-          },
-      }
-  );
-
-    context.subscriptions.push(linkProvider);
-
-    // Listen for configuration changes
+  // Listen for configuration changes
   vscode.workspace.onDidChangeConfiguration((event) => {
     if (event.affectsConfiguration('meteorSettingsIntelliSense.settingsFilePath')) {
       console.log('Settings file path changed, reloading settings...');
       settings = loadSettings();
       createSettingsWatcher(context);
-
     }
   });
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document.languageId === 'javascript' || event.document.languageId === 'javascriptreact') {
+      updateDiagnostics(event.document, settings);
+    }
+  });
+
+  vscode.workspace.onDidOpenTextDocument((document) => {
+    console.log(`Opened: ${document.uri.fsPath}`);
+    if (document.languageId === 'javascript' || document.languageId === 'javascriptreact') {
+        console.log('Updating diagnostics for:', document.uri.fsPath);
+        updateDiagnostics(document, settings);
+    }
+});
+  vscode.workspace.onDidCloseTextDocument((doc) => {
+    diagnosticsCollection.delete(doc.uri);
+  });
+
+  // Update diagnostics for all open documents on activation
+  updateAllDiagnostics();
+  
   }
 
 

@@ -4,6 +4,19 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.1] - 2024-06-13
+
+### Added
+  - Error highlighting when key doesn't exist on settings object.
+  - Error highlighting when accessing non-public key from client code.
+  - Added event listeners for edited files and updated settings when file is saved.
+  - Error linting on already opened files when extension activates.
+
+### Changed
+  - Improved README.md with gifs for visual explanation and new features
+  - Added error line in detail of hover and autocomplete when key shouldn't be accessed from client code
+  
+
 ## [0.1.0] - 2024-06-12
 
 ### Added

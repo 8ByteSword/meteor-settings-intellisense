@@ -3,7 +3,7 @@
   "displayName": "Meteor Settings IntelliSense",
   "publisher": "etraid",
   "description": "Provides hints and autocompletion for Meteor settings",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.60.0"
   },
