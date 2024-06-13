@@ -4,6 +4,10 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.2] - 2024-06-13
+  ### Fixed
+    - Duplicated keys exiting before the linting is done.
+
 ## [0.1.1] - 2024-06-13
 
 ### Added
