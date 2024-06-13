@@ -1,3 +1,4 @@
+
 const vscode = require('vscode');
 const parseSettings = require('./parseSettings');
 const path = require('path');
@@ -147,20 +148,27 @@ function updateDiagnostics(document, settings) {
         const range = document.getWordRangeAtPosition(position, /Meteor\.settings\.[\w.]+/);
         if (range) {
           const fullWord = document.getText(range);
+          
           const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
-          const keys = fullWord.split('.').slice(2); // Remove 'Meteor.settings'
+          const relativeHoveredPosition = position.e - range.start.e;
 
+          const keys = fullWord.split('.').slice(2); // Remove 'Meteor.settings'
+          
+          let relativePosition = "Meteor.settings".length;
           let value = settings;
           let keyPath = 'Meteor.settings';
+          
           keys.every((key) => {
             keyPath += `.${key}`;
-            if (key === hoveredWord) {
+            if (key === hoveredWord && (relativePosition + key.length + 1) >= relativeHoveredPosition) {
               if (value[key] !== undefined) {
                 value = value[key]; return false;
               }
               value = undefined;
             } else if (value[key] !== undefined) {
-              value = value[key]; return true;
+              value = value[key]; 
+              relativePosition+=(key.length + 1); // the key and the '.'
+              return true;
             }
             value = undefined;
             return false;
@@ -310,20 +318,27 @@ function updateDiagnostics(document, settings) {
             const settingsPath = `${baseDir}/${settingsFilePath}`;
 
             const wordLocations = {};
+            let prevLine = 0;
+            let relativePosition = "Meteor.".length
 
             const createLink = (key) => {
-              const start = match.index + match[0].indexOf(key);
+              const start = match.index + relativePosition;
               const docStart = doc.positionAt(start);
+
               const end = start + key.length;
               const docEnd = doc.positionAt(end);
+              
               const range = new vscode.Range(docStart, docEnd);
-  
+              
               let line; let pos;
-              if (!wordLocations[key]) {
-                [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key);
-                wordLocations[key] = [line, pos];
-              } else [line, pos] = wordLocations[key];
-  
+              if (!wordLocations[match][relativePosition]) {
+                [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key, prevLine);
+                wordLocations[match][relativePosition] = [line, pos];
+                } else [line, pos] = wordLocations[match][relativePosition];
+                
+              relativePosition += (key.length + 1)
+              prevLine = line;
+
               let uri = vscode.Uri.file(settingsPath);
               if (line && pos) {
                 uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
@@ -336,6 +351,7 @@ function updateDiagnostics(document, settings) {
 
             while ((match = pattern.exec(text)) !== null) {
                 const keys = match[0].split('.').slice(1); // Remove 'Meteor'
+                wordLocations[match] = {};
 
                 keys.forEach(createLink)
             }

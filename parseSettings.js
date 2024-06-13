@@ -25,7 +25,7 @@ function readSettings(baseDir, settingsFilePath) {
  * @param {string} setting - The setting to look for.
  * @returns {Array} - The line and the position in the line respectively.
  */
-function getSettingPosition(baseDir, settingsFilePath, setting) {
+function getSettingPosition(baseDir, settingsFilePath, setting, startingLine = 0) {
   let res = [];
   const filePath = path.isAbsolute(settingsFilePath)
   ? settingsFilePath
@@ -34,9 +34,10 @@ function getSettingPosition(baseDir, settingsFilePath, setting) {
     return res;
   }
   const settings = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
-  settings.forEach((line, index) => {
+  settings.slice(startingLine).some((line, index) => {
     const pos = line.indexOf(`"${setting}"`);
-    if(pos && pos >= 0) res = [index, pos];
+    if(pos && pos >= 0) { res = [index + startingLine, pos]; return true; }
+    return false;
   });
   return res;
 }
