@@ -4,6 +4,10 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.5] - 2024-06-14
+  ### Changed
+    - Updated categories and keywords for better discoverability in the marketplace.
+
 ## [0.1.4] - 2024-06-14
   ### Fixed
     - Links broken when repeated keys
