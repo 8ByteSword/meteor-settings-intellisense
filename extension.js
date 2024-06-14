@@ -319,9 +319,11 @@ function updateDiagnostics(document, settings) {
 
             const wordLocations = {};
             let prevLine = 0;
-            let relativePosition = "Meteor.".length
+            let relativePosition;
 
             const createLink = (key) => {
+              if(!wordLocations[key]) wordLocations[key] = {};
+
               const start = match.index + relativePosition;
               const docStart = doc.positionAt(start);
 
@@ -331,10 +333,10 @@ function updateDiagnostics(document, settings) {
               const range = new vscode.Range(docStart, docEnd);
               
               let line; let pos;
-              if (!wordLocations[match][relativePosition]) {
+              if (!wordLocations[key][relativePosition]) {
                 [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key, prevLine);
-                wordLocations[match][relativePosition] = [line, pos];
-                } else [line, pos] = wordLocations[match][relativePosition];
+                wordLocations[key][relativePosition] = [line, pos];
+                } else [line, pos] = wordLocations[key][relativePosition];
                 
               relativePosition += (key.length + 1)
               prevLine = line;
@@ -351,8 +353,8 @@ function updateDiagnostics(document, settings) {
 
             while ((match = pattern.exec(text)) !== null) {
                 const keys = match[0].split('.').slice(1); // Remove 'Meteor'
-                wordLocations[match] = {};
-
+                relativePosition = "Meteor.".length;
+                
                 keys.forEach(createLink)
             }
 
