@@ -4,6 +4,10 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.4] - 2024-06-14
+  ### Fixed
+    - Links broken when repeated keys
+
 ## [0.1.3] - 2024-06-14
   ### Fixed
     - Gifs in README fixed to work on vscode marketplace
