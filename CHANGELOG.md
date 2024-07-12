@@ -4,13 +4,19 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-<<<<<<< HEAD
+## [0.1.6] - 2024-07-13
+  ### Added
+    - Support for destructured Meteor settings in hover tooltips.
+    - Error linting for non-existent keys in destructured assignments.
+    - Hover tooltips now show error messages for non-existent destructured keys.
+
+  ### Fixed
+    - Corrected handling of Meteor settings path in destructured assignments.
+
 ## [0.1.5] - 2024-06-14
   ### Changed
     - Updated categories and keywords for better discoverability in the marketplace.
 
-=======
->>>>>>> 9c1e1d30c659164fc4f227bf37f62376e5399d83
 ## [0.1.4] - 2024-06-14
   ### Fixed
     - Links broken when repeated keys
