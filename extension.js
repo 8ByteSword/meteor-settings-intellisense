@@ -95,10 +95,11 @@ function activate(context) {
 function updateDiagnostics(document, settings) {
   const diagnostics = [];
   const text = document.getText();
-  const pattern = /Meteor\.settings\.[\w.]+/g;
+  const meteorSettingsPattern = /Meteor\.settings\.[\w.]+/g;
+  const destructuringPattern = /(?:const|let|var)\s*{\s*([^}]+)\s*}\s*=\s*(Meteor\.settings(?:\.\w+)*)/g;
   let match;
 
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = meteorSettingsPattern.exec(text)) !== null) {
     const keys = match[0].split('.').slice(2); // get keys after Meteor.settings
     let currentSettings = settings;
     let exists = true;
@@ -131,7 +132,55 @@ function updateDiagnostics(document, settings) {
       diagnostics.push(diagnostic);
     }
   }
+   // New check for destructured assignments
+   while ((match = destructuringPattern.exec(text)) !== null) {
+    const destructuredVars = match[1].split(',').map(v => v.trim());
+    const settingsPath = match[2].split('.').slice(2); // Remove 'Meteor' and 'settings'
+    let currentSettings = settings;
 
+    // Traverse the settings object
+    for (const key of settingsPath) {
+      if (currentSettings && typeof currentSettings === 'object' && key in currentSettings) {
+        currentSettings = currentSettings[key];
+      } else {
+        currentSettings = null;
+        break;
+      }
+    }
+
+    // Check each destructured variable
+    const lineText = document.lineAt(document.positionAt(match.index)).text;
+    destructuredVars.forEach(variable => {
+      const variableStart = lineText.indexOf(variable, match.index - document.offsetAt(document.positionAt(match.index).with({ character: 0 })));
+      if (variableStart !== -1) {
+        const variableRange = new vscode.Range(
+          document.positionAt(document.offsetAt(document.positionAt(match.index).with({ character: 0 })) + variableStart),
+          document.positionAt(document.offsetAt(document.positionAt(match.index).with({ character: 0 })) + variableStart + variable.length)
+        );
+
+        if (!currentSettings || typeof currentSettings !== 'object' || !(variable in currentSettings)) {
+          const diagnostic = new vscode.Diagnostic(
+            variableRange,
+            `Destructured key '${variable}' does not exist in Meteor settings.`,
+            vscode.DiagnosticSeverity.Error
+          );
+          diagnostics.push(diagnostic);
+        }
+
+        // Check for non-public settings in client code
+        const isClientFolder = document.uri.fsPath.includes('client');
+        const isPublic = match[2].includes('Meteor.settings.public');
+        if (isClientFolder && !isPublic) {
+          const diagnostic = new vscode.Diagnostic(
+            variableRange,
+            'Accessing non-public Meteor settings from client code.',
+            vscode.DiagnosticSeverity.Error
+          );
+          diagnostics.push(diagnostic);
+        }
+      }
+    });
+  }
   diagnosticsCollection.set(document.uri, diagnostics);
 }
 
@@ -194,6 +243,55 @@ function updateDiagnostics(document, settings) {
             content.supportHtml = true;
             content.isTrusted = true;
             return new vscode.Hover(content, range);
+          }
+        } else {
+          // Updated code to handle destructured variables
+          const lineText = document.lineAt(position.line).text;
+          const destructuringMatch = lineText.match(/(?:const|let|var)\s*{\s*([^}]+)\s*}\s*=\s*(Meteor\.settings(?:\.\w+)*)/);
+          
+          if (destructuringMatch) {
+            const destructuredVars = destructuringMatch[1].split(',').map(v => v.trim());
+            const settingsPath = destructuringMatch[2].split('.').slice(2); // Remove 'Meteor' and 'settings'
+            const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
+            
+            if (destructuredVars.includes(hoveredWord)) {
+              let value = settings;
+              for (const key of settingsPath) {
+                if (value && typeof value === 'object' && key in value) {
+                  value = value[key];
+                } else {
+                  value = undefined;
+                  break;
+                }
+              }
+              
+              const content = new vscode.MarkdownString();
+              const isClientFolder = document.uri.fsPath.includes('client');
+              const isPublicKey = settingsPath[0] === 'public';
+  
+              if (isClientFolder && !isPublicKey) {
+                content.appendMarkdown(`<span style="color:#c71c1cdb;"><b>Warning: Accessing non-public key in client code.</b></span> \n`);
+              }
+  
+              if (value && typeof value === 'object' && hoveredWord in value) {
+                const hoverValue = value[hoveredWord];
+                let type = typeof hoverValue;
+                if (Array.isArray(hoverValue)) {
+                  type = 'array';
+                } else if (type === 'object') {
+                  type = 'object';
+                }
+  
+                content.appendMarkdown(`\n **${destructuringMatch[2]}.${hoveredWord}** (${type}): \n`)
+                content.appendCodeblock(JSON.stringify(hoverValue, null, 2), 'json');
+              } else {
+                content.appendMarkdown(`\n **Error**: The key '${hoveredWord}' does not exist in ${destructuringMatch[2]}.`);
+              }
+  
+              content.supportHtml = true;
+              content.isTrusted = true;
+              return new vscode.Hover(content, document.getWordRangeAtPosition(position));
+            }
           }
         }
         return null;
