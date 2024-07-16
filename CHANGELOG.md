@@ -4,6 +4,9 @@ All notable changes to the "meteor-settings-hinting" extension will be documente
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.7] - 2024-07-16
+    - Support for destructured Meteor settings in link provider
+
 ## [0.1.6] - 2024-07-13
   ### Added
     - Support for destructured Meteor settings in hover tooltips.

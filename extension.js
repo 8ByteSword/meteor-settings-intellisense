@@ -15,7 +15,7 @@ function activate(context) {
         diagnosticsCollection.delete(document.uri);
         updateDiagnostics(document, settings);
       }
-  });
+    });
   }
 
   let settings = {};
@@ -27,8 +27,8 @@ function activate(context) {
     const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
     const baseDir = workspaceFolders[0].uri.fsPath;
     const filePath = path.isAbsolute(settingsFilePath)
-    ? settingsFilePath
-    : path.join(baseDir, settingsFilePath);
+      ? settingsFilePath
+      : path.join(baseDir, settingsFilePath);
     if (settingsWatcher) {
       settingsWatcher.dispose();
     }
@@ -54,7 +54,7 @@ function activate(context) {
     });
 
     context.
-    subscriptions.push(settingsWatcher);
+      subscriptions.push(settingsWatcher);
   }
 
   // Function to load settings
@@ -77,8 +77,8 @@ function activate(context) {
 
   // Register a command to test the settings parsing
   const testSettingsCommand = vscode.commands.registerCommand('meteor-settings-intellisense.testSettingsParsing', () => {
-  const { workspaceFolders } = vscode.workspace;
-  if (workspaceFolders) {
+    const { workspaceFolders } = vscode.workspace;
+    if (workspaceFolders) {
       vscode.window.showInformationMessage(`Parsed settings: ${JSON.stringify(settings, null, 2)}`);
     } else {
       vscode.window.showInformationMessage('No workspace folder open.');
@@ -92,97 +92,97 @@ function activate(context) {
 
   const diagnosticsCollection = vscode.languages.createDiagnosticCollection('meteorSettings');
 
-function updateDiagnostics(document, settings) {
-  const diagnostics = [];
-  const text = document.getText();
-  const meteorSettingsPattern = /Meteor\.settings\.[\w.]+/g;
-  const destructuringPattern = /(?:const|let|var)\s*{\s*([^}]+)\s*}\s*=\s*(Meteor\.settings(?:\.\w+)*)/g;
-  let match;
+  function updateDiagnostics(document, settings) {
+    const diagnostics = [];
+    const text = document.getText();
+    const meteorSettingsPattern = /Meteor\.settings\.[\w.]+/g;
+    const destructuringPattern = /(?:const|let|var)\s*{\s*([^}]+)\s*}\s*=\s*(Meteor\.settings(?:\.\w+)*)/g;
+    let match;
 
-  while ((match = meteorSettingsPattern.exec(text)) !== null) {
-    const keys = match[0].split('.').slice(2); // get keys after Meteor.settings
-    let currentSettings = settings;
-    let exists = true;
-    keys.forEach(key => {
-      if (currentSettings && typeof currentSettings === 'object' && (key in currentSettings)) {
-        currentSettings = currentSettings[key];
-      } else {
-        exists = false;
-      }
-    });
+    while ((match = meteorSettingsPattern.exec(text)) !== null) {
+      const keys = match[0].split('.').slice(2); // get keys after Meteor.settings
+      let currentSettings = settings;
+      let exists = true;
+      keys.forEach(key => {
+        if (currentSettings && typeof currentSettings === 'object' && (key in currentSettings)) {
+          currentSettings = currentSettings[key];
+        } else {
+          exists = false;
+        }
+      });
 
-    const isPublic = match[0].startsWith('Meteor.settings.public');
-    const isClientFolder = document.uri.fsPath.includes('client');
+      const isPublic = match[0].startsWith('Meteor.settings.public');
+      const isClientFolder = document.uri.fsPath.includes('client');
 
-    if (isClientFolder && !isPublic) {
-      const diagnostic = new vscode.Diagnostic(
-        new vscode.Range(document.positionAt(match.index), document.positionAt(match.index + match[0].length)),
-        'Accessing non-public Meteor settings from client code.',
-        vscode.DiagnosticSeverity.Error
-      );
-      diagnostics.push(diagnostic);
-    }
-
-    if (!exists) {
-      const diagnostic = new vscode.Diagnostic(
-        new vscode.Range(document.positionAt(match.index), document.positionAt(match.index + match[0].length)),
-        'Meteor settings key does not exist.',
-        vscode.DiagnosticSeverity.Error
-      );
-      diagnostics.push(diagnostic);
-    }
-  }
-   // New check for destructured assignments
-   while ((match = destructuringPattern.exec(text)) !== null) {
-    const destructuredVars = match[1].split(',').map(v => v.trim());
-    const settingsPath = match[2].split('.').slice(2); // Remove 'Meteor' and 'settings'
-    let currentSettings = settings;
-
-    // Traverse the settings object
-    for (const key of settingsPath) {
-      if (currentSettings && typeof currentSettings === 'object' && key in currentSettings) {
-        currentSettings = currentSettings[key];
-      } else {
-        currentSettings = null;
-        break;
-      }
-    }
-
-    // Check each destructured variable
-    const lineText = document.lineAt(document.positionAt(match.index)).text;
-    destructuredVars.forEach(variable => {
-      const variableStart = lineText.indexOf(variable, match.index - document.offsetAt(document.positionAt(match.index).with({ character: 0 })));
-      if (variableStart !== -1) {
-        const variableRange = new vscode.Range(
-          document.positionAt(document.offsetAt(document.positionAt(match.index).with({ character: 0 })) + variableStart),
-          document.positionAt(document.offsetAt(document.positionAt(match.index).with({ character: 0 })) + variableStart + variable.length)
+      if (isClientFolder && !isPublic) {
+        const diagnostic = new vscode.Diagnostic(
+          new vscode.Range(document.positionAt(match.index), document.positionAt(match.index + match[0].length)),
+          'Accessing non-public Meteor settings from client code.',
+          vscode.DiagnosticSeverity.Error
         );
+        diagnostics.push(diagnostic);
+      }
 
-        if (!currentSettings || typeof currentSettings !== 'object' || !(variable in currentSettings)) {
-          const diagnostic = new vscode.Diagnostic(
-            variableRange,
-            `Destructured key '${variable}' does not exist in Meteor settings.`,
-            vscode.DiagnosticSeverity.Error
-          );
-          diagnostics.push(diagnostic);
-        }
+      if (!exists) {
+        const diagnostic = new vscode.Diagnostic(
+          new vscode.Range(document.positionAt(match.index), document.positionAt(match.index + match[0].length)),
+          'Meteor settings key does not exist.',
+          vscode.DiagnosticSeverity.Error
+        );
+        diagnostics.push(diagnostic);
+      }
+    }
+    // New check for destructured assignments
+    while ((match = destructuringPattern.exec(text)) !== null) {
+      const destructuredVars = match[1].split(',').map(v => v.trim());
+      const settingsPath = match[2].split('.').slice(2); // Remove 'Meteor' and 'settings'
+      let currentSettings = settings;
 
-        // Check for non-public settings in client code
-        const isClientFolder = document.uri.fsPath.includes('client');
-        const isPublic = match[2].includes('Meteor.settings.public');
-        if (isClientFolder && !isPublic) {
-          const diagnostic = new vscode.Diagnostic(
-            variableRange,
-            'Accessing non-public Meteor settings from client code.',
-            vscode.DiagnosticSeverity.Error
-          );
-          diagnostics.push(diagnostic);
+      // Traverse the settings object
+      for (const key of settingsPath) {
+        if (currentSettings && typeof currentSettings === 'object' && key in currentSettings) {
+          currentSettings = currentSettings[key];
+        } else {
+          currentSettings = null;
+          break;
         }
       }
-    });
+
+      // Check each destructured variable
+      const lineText = document.lineAt(document.positionAt(match.index)).text;
+      destructuredVars.forEach(variable => {
+        const variableStart = lineText.indexOf(variable, match.index - document.offsetAt(document.positionAt(match.index).with({ character: 0 })));
+        if (variableStart !== -1) {
+          const variableRange = new vscode.Range(
+            document.positionAt(document.offsetAt(document.positionAt(match.index).with({ character: 0 })) + variableStart),
+            document.positionAt(document.offsetAt(document.positionAt(match.index).with({ character: 0 })) + variableStart + variable.length)
+          );
+
+          if (!currentSettings || typeof currentSettings !== 'object' || !(variable in currentSettings)) {
+            const diagnostic = new vscode.Diagnostic(
+              variableRange,
+              `Destructured key '${variable}' does not exist in Meteor settings.`,
+              vscode.DiagnosticSeverity.Error
+            );
+            diagnostics.push(diagnostic);
+          }
+
+          // Check for non-public settings in client code
+          const isClientFolder = document.uri.fsPath.includes('client');
+          const isPublic = match[2].includes('Meteor.settings.public');
+          if (isClientFolder && !isPublic) {
+            const diagnostic = new vscode.Diagnostic(
+              variableRange,
+              'Accessing non-public Meteor settings from client code.',
+              vscode.DiagnosticSeverity.Error
+            );
+            diagnostics.push(diagnostic);
+          }
+        }
+      });
+    }
+    diagnosticsCollection.set(document.uri, diagnostics);
   }
-  diagnosticsCollection.set(document.uri, diagnostics);
-}
 
   // Register a hover provider
   const hoverProvider = vscode.languages.registerHoverProvider(
@@ -197,16 +197,16 @@ function updateDiagnostics(document, settings) {
         const range = document.getWordRangeAtPosition(position, /Meteor\.settings\.[\w.]+/);
         if (range) {
           const fullWord = document.getText(range);
-          
+
           const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
           const relativeHoveredPosition = position.e - range.start.e;
 
           const keys = fullWord.split('.').slice(2); // Remove 'Meteor.settings'
-          
+
           let relativePosition = "Meteor.settings".length;
           let value = settings;
           let keyPath = 'Meteor.settings';
-          
+
           keys.every((key) => {
             keyPath += `.${key}`;
             if (key === hoveredWord && (relativePosition + key.length + 1) >= relativeHoveredPosition) {
@@ -215,8 +215,8 @@ function updateDiagnostics(document, settings) {
               }
               value = undefined;
             } else if (value[key] !== undefined) {
-              value = value[key]; 
-              relativePosition+=(key.length + 1); // the key and the '.'
+              value = value[key];
+              relativePosition += (key.length + 1); // the key and the '.'
               return true;
             }
             value = undefined;
@@ -234,7 +234,7 @@ function updateDiagnostics(document, settings) {
               type = 'object';
             }
 
-            
+
             if (isClientFolder && !isPublicKey) {
               content.appendMarkdown(`<span style="color:#c71c1cdb;"><b>Warning: Accessing non-public key in client code.</b></span> \n`);
             }
@@ -248,12 +248,12 @@ function updateDiagnostics(document, settings) {
           // Updated code to handle destructured variables
           const lineText = document.lineAt(position.line).text;
           const destructuringMatch = lineText.match(/(?:const|let|var)\s*{\s*([^}]+)\s*}\s*=\s*(Meteor\.settings(?:\.\w+)*)/);
-          
+
           if (destructuringMatch) {
             const destructuredVars = destructuringMatch[1].split(',').map(v => v.trim());
             const settingsPath = destructuringMatch[2].split('.').slice(2); // Remove 'Meteor' and 'settings'
             const hoveredWord = document.getText(document.getWordRangeAtPosition(position));
-            
+
             if (destructuredVars.includes(hoveredWord)) {
               let value = settings;
               for (const key of settingsPath) {
@@ -264,15 +264,15 @@ function updateDiagnostics(document, settings) {
                   break;
                 }
               }
-              
+
               const content = new vscode.MarkdownString();
               const isClientFolder = document.uri.fsPath.includes('client');
               const isPublicKey = settingsPath[0] === 'public';
-  
+
               if (isClientFolder && !isPublicKey) {
                 content.appendMarkdown(`<span style="color:#c71c1cdb;"><b>Warning: Accessing non-public key in client code.</b></span> \n`);
               }
-  
+
               if (value && typeof value === 'object' && hoveredWord in value) {
                 const hoverValue = value[hoveredWord];
                 let type = typeof hoverValue;
@@ -281,13 +281,13 @@ function updateDiagnostics(document, settings) {
                 } else if (type === 'object') {
                   type = 'object';
                 }
-  
+
                 content.appendMarkdown(`\n **${destructuringMatch[2]}.${hoveredWord}** (${type}): \n`)
                 content.appendCodeblock(JSON.stringify(hoverValue, null, 2), 'json');
               } else {
                 content.appendMarkdown(`\n **Error**: The key '${hoveredWord}' does not exist in ${destructuringMatch[2]}.`);
               }
-  
+
               content.supportHtml = true;
               content.isTrusted = true;
               return new vscode.Hover(content, document.getWordRangeAtPosition(position));
@@ -399,67 +399,109 @@ function updateDiagnostics(document, settings) {
   // Register link provider
   const linkProvider = vscode.languages.registerDocumentLinkProvider(
     [
-        { scheme: 'file', language: 'javascript' },
-        { scheme: 'file', language: 'javascriptreact' },
-        { scheme: 'file', language: 'typescript' },
-        { scheme: 'file', language: 'typescriptreact' },
+      { scheme: 'file', language: 'javascript' },
+      { scheme: 'file', language: 'javascriptreact' },
+      { scheme: 'file', language: 'typescript' },
+      { scheme: 'file', language: 'typescriptreact' },
     ],
     {
-        provideDocumentLinks(doc) {
-            const links = [];
-            const text = doc.getText();
-            const pattern = /Meteor\.settings\.[\w.]+/g;
-            let match;
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            const baseDir = workspaceFolders[0].uri.fsPath;
-            const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
-            const settingsPath = `${baseDir}/${settingsFilePath}`;
+      provideDocumentLinks(doc) {
+        const links = [];
+        const text = doc.getText();
+        const meteorSettingsPattern = /Meteor\.settings\.[\w.]+/g;
+        const destructuringPattern = /(?:const|let|var)\s*{\s*([^}]+)\s*}\s*=\s*(Meteor\.settings(?:\.\w+)*)/g;
+        let match;
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const baseDir = workspaceFolders[0].uri.fsPath;
+        const settingsFilePath = vscode.workspace.getConfiguration('meteorSettingsIntelliSense').get('settingsFilePath');
+        const settingsPath = `${baseDir}/${settingsFilePath}`;
 
-            const wordLocations = {};
-            let prevLine = 0;
-            let relativePosition;
+        const wordLocations = {};
+        let prevLine = 0;
+        let relativePosition;
 
-            const createLink = (key) => {
-              if(!wordLocations[key]) wordLocations[key] = {};
+        const createLink = (key, fullPath) => {
+          if (!wordLocations[key]) wordLocations[key] = {};
 
-              const start = match.index + relativePosition;
-              const docStart = doc.positionAt(start);
+          const start = match.index + relativePosition;
+          const docStart = doc.positionAt(start);
 
-              const end = start + key.length;
-              const docEnd = doc.positionAt(end);
-              
-              const range = new vscode.Range(docStart, docEnd);
-              
-              let line; let pos;
-              if (!wordLocations[key][relativePosition]) {
-                [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key, prevLine);
-                wordLocations[key][relativePosition] = [line, pos];
-                } else [line, pos] = wordLocations[key][relativePosition];
-                
-              relativePosition += (key.length + 1)
-              prevLine = line;
+          const end = start + key.length;
+          const docEnd = doc.positionAt(end);
 
-              let uri = vscode.Uri.file(settingsPath);
-              if (line && pos) {
-                uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
-              } else if(key !== 'settings') return;
-  
-              const link = new vscode.DocumentLink(range, uri);
-              links.push(link);
-            };
-  
+          const range = new vscode.Range(docStart, docEnd);
 
-            while ((match = pattern.exec(text)) !== null) {
-                const keys = match[0].split('.').slice(1); // Remove 'Meteor'
-                relativePosition = "Meteor.".length;
-                
-                keys.forEach(createLink)
+          let line, pos;
+          if (!wordLocations[key][relativePosition]) {
+            [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, key, prevLine);
+            wordLocations[key][relativePosition] = [line, pos];
+          } else[line, pos] = wordLocations[key][relativePosition];
+
+          relativePosition += (key.length + 1)
+          prevLine = line;
+
+          let uri = vscode.Uri.file(settingsPath);
+          if (line && pos) {
+            uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
+          } else if (key !== 'settings') return;
+
+          const link = new vscode.DocumentLink(range, uri);
+          links.push(link);
+        };
+
+        // Handle direct Meteor.settings references
+        while ((match = meteorSettingsPattern.exec(text)) !== null) {
+          const keys = match[0].split('.').slice(1); // Remove 'Meteor'
+          relativePosition = "Meteor.".length;
+          keys.forEach(key => createLink(key, match[0]));
+        }
+
+        // Handle destructured assignments
+        while ((match = destructuringPattern.exec(text)) !== null) {
+          const destructuredVars = match[1].split(',').map(v => v.trim());
+          const keyPaths = match[2].split('.').slice(2); // Remove 'Meteor' and 'settings'
+          let currentSettings = settings;
+
+          // Traverse the settings object
+          for (const key of keyPaths) {
+            if (currentSettings && typeof currentSettings === 'object' && key in currentSettings) {
+              currentSettings = currentSettings[key];
+            } else {
+              currentSettings = null;
+              break;
             }
+          }
 
-            return links;
-        },
-    }
-);
+          if (currentSettings && typeof currentSettings === 'object') {
+            destructuredVars.forEach(variable => {
+              const trimmedVar = variable.trim();
+              if (trimmedVar in currentSettings) {
+                const variableStart = text.indexOf(trimmedVar, match.index);
+                if (variableStart !== -1) {
+                  const range = new vscode.Range(
+                    doc.positionAt(variableStart),
+                    doc.positionAt(variableStart + trimmedVar.length)
+                  );
+                  const fullPath = `${match[2]}.${trimmedVar}`;
+
+                  let [line, pos] = parseSettings.getSettingPosition(baseDir, settingsFilePath, trimmedVar, prevLine);
+                  let uri = vscode.Uri.file(settingsPath);
+
+                  if (line && pos) {
+                    uri = uri.with({ fragment: `L${line + 1},${pos + 1}` });
+                  }
+
+                  const link = new vscode.DocumentLink(range, uri);
+                  links.push(link);
+                }
+              }
+            });
+          }
+        }
+
+        return links;
+      },
+    });
 
   context.subscriptions.push(linkProvider);
 
@@ -480,21 +522,21 @@ function updateDiagnostics(document, settings) {
   vscode.workspace.onDidOpenTextDocument((document) => {
     console.log(`Opened: ${document.uri.fsPath}`);
     if (document.languageId === 'javascript' || document.languageId === 'javascriptreact') {
-        console.log('Updating diagnostics for:', document.uri.fsPath);
-        updateDiagnostics(document, settings);
+      console.log('Updating diagnostics for:', document.uri.fsPath);
+      updateDiagnostics(document, settings);
     }
-});
+  });
   vscode.workspace.onDidCloseTextDocument((doc) => {
     diagnosticsCollection.delete(doc.uri);
   });
 
   // Update diagnostics for all open documents on activation
   updateAllDiagnostics();
-  
-  }
+
+}
 
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
   activate,
